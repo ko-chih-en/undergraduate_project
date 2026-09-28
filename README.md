@@ -9,8 +9,8 @@ Assuming that X_1 and X_2 are two N(0, 1) random variables and d is the threshol
 $$
 Y_1 = 
 \begin{cases}
-1, & \text{if } X_1 > d \\
--1, & \text{if } X_1 < d
+1, & \text{if \ } X_1 > d \\
+-1, & \text{if \ } X_1 < d
 \end{cases}
 $$
 
