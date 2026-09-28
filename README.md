@@ -12,16 +12,17 @@ Y_1 =
 1, & \text{if } X_1 > d \\
 -1, & \text{if } X_1 < d
 \end{cases}
-$$ and $$
+$$,
+$$
 Y_2 = 
 \begin{cases}
 1, & \text{if } X_2 > d \\
 -1, & \text{if } X_2 < d
 \end{cases}
-$$
+$$,
+and
+$\mu = Y_1 Y_2.
 
-$\mu = Y_1 Y_2$
-
-And, we aim to use $\mathcal{E}[\mu]$ to derive the correlation coefficient of $X_1$ and $X_2$.
+Here we aim to use $\mathcal{E}[\mu]$ to derive the correlation coefficient of $X_1$ and $X_2$.
 
 
