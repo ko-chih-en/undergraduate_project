@@ -4,7 +4,7 @@ In this project, we compare 4 methods to compute or estimate the one bit quantiz
 
 One bit quantization problem:
 
-Assuming that X_1 and X_2 are two N(0, 1) random variables and d is the threshold for one-bit quantization.
+Assuming that $$X_1$$ and $$X_2$$ are two $$\mathcal{N}(0, 1)$$ random variables and d is the threshold for one-bit quantization.
 
 $$
 Y_1 = 
