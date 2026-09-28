@@ -7,14 +7,18 @@ One bit quantization problem:
 Assuming that X_1 and X_2 are two N(0, 1) random variables and d is the threshold for one-bit quantization.
 
 $$
-f(x) = 
+Y_1 = 
 \begin{cases}
-x^2, & \text{當 } x \ge 0 \\
--x, & \text{當 } x < 0
+1, & \text{if } X_1 > d \\
+-1, & \text{if } X_1 < d
+\end{cases}
+$$ and $$
+Y_2 = 
+\begin{cases}
+1, & \text{if } X_2 > d \\
+-1, & \text{if } X_2 < d
 \end{cases}
 $$
-
-$Y_2 = 1$ if $X_2>d$ and $-1$ if $X_2<d$
 
 $\mu = Y_1 Y_2$
 
