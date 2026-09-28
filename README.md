@@ -14,6 +14,8 @@ Y_1 =
 \end{cases}
 $$
 
+and
+
 $$
 Y_2 = 
 \begin{cases}
@@ -22,9 +24,6 @@ Y_2 =
 \end{cases}
 $$
 
-and
-$$\mu = Y_1 Y_2$$.
-
-Here we aim to use $$\mathbb{E}[\mu]$$ to derive the correlation coefficient of $X_1$ and $X_2$.
+Here we aim to use $$\mathbb{E}[Y_1 Y_2]$$ to derive the correlation coefficient of $X_1$ and $X_2$.
 
 
