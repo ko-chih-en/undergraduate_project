@@ -13,7 +13,7 @@ Y_1 =
 -1, & \text{if } X_1 < d
 \end{cases}
 $$
-,
+
 $$
 Y_2 = 
 \begin{cases}
@@ -21,7 +21,7 @@ Y_2 =
 -1, & \text{if } X_2 < d
 \end{cases}
 $$
-,
+
 and
 $$\mu = Y_1 Y_2$$.
 
