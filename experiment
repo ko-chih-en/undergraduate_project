@@ -1,0 +1,224 @@
+clear, clc;
+
+%% initialization %%
+space = 0.005;    % Delta for correlation coefficient
+rho_start = 0.8;  % correlation coefficient starting point
+rho_end = 1;      % correlation coefficient ending point
+sigma_1 = 1;      % standard deviation for X_1
+sigma_2 = 1;      % standard deviation for X_2
+d = 0.3;          % threshold for one bit quantization
+Nq = 5;           % Nq for GL approximation method
+L = 5;            % L for OBHL approximation method
+
+rho = rho_start+space:space:rho_end-space;
+
+%% 1st method: Monte-Carlo method
+tic;
+r_y_1 = gaussian_data(sigma_1, sigma_2, d, rho, 10^6);
+elapsedTime1 = toc;
+
+%% 2nd method: GL approximation method
+tic;
+r_y_2 = GL_approximation(sigma_1, sigma_2, d, Nq, rho);
+elapsedTime2 = toc;
+
+%% 3rd method: OBHL approximation method (using parameter design in previous paper)
+[A, beta] = design_parameter(L, 'previous paper');
+tic;
+r_y_3 = one_bit_hermite_law(A, beta, L, sigma_1, sigma_2, d, rho);
+elapsedTime3 = toc;
+
+%% 4th method: OBHL approximation method (using parameter design in this paper)
+[A, beta] = design_parameter(L, 'this paper');
+tic;
+r_y_4 = one_bit_hermite_law(A, beta, L, sigma_1, sigma_2, d, rho);
+elapsedTime4 = toc;
+
+%% Results
+mse_error_1 = sum((r_y_1 - r_y_2).^2)/size(r_y_1 - r_y_2, 2);
+mse_error_2 = sum((r_y_1 - r_y_3).^2)/size(r_y_1 - r_y_3, 2);
+mse_error_3 = sum((r_y_1 - r_y_4).^2)/size(r_y_1 - r_y_4, 2);
+
+figure;
+f = scatter(rho, r_y_1, 'LineWidth', 2, 'Marker', 'o');
+hold on
+plot(rho, r_y_2, 'LineWidth', 2);
+plot(rho, r_y_3, 'LineWidth', 2);
+plot(rho, r_y_4, 'LineWidth', 2);
+xlabel('$\rho_x$', 'FontSize', 12, 'Interpreter', 'latex');
+ylabel('One-bit Correlation', 'FontSize', 12, 'Interpreter', 'latex');
+legend(['Monte-Carlo iteration: ', num2str(elapsedTime1, '%.4e'), ' sec'],...
+    ['Gaussian quadrature technique: ', num2str(elapsedTime2, '%.4e'), ' sec, MSE = ',...
+    num2str(mse_error_1, '%.4e')], ...
+    ['One Bit Hermite Law (Previous paper): ', num2str(elapsedTime3, '%.4e'), ' sec, MSE = ',...
+    num2str(mse_error_2, '%.4e') ], ...
+    ['One Bit Hermite Law (Optimization): ', num2str(elapsedTime4, '%.4e'), ' sec, MSE = ',...
+    num2str(mse_error_3, '%.4e') ]);
+
+%% Function 1: Monte-Carlo method
+
+function R = gaussian_data(sigma_1, sigma_2, lambda, correlation_coeff, time)
+    rng(2025);
+    x = randn(size(correlation_coeff, 2), time);
+    y = randn(size(correlation_coeff, 2), time);
+    R = zeros(size(lambda, 2), size(correlation_coeff, 1));
+    
+    for i = 1:size(correlation_coeff, 2)
+        a = 0.5*((1+correlation_coeff(i)).^0.5 +...
+            (1-correlation_coeff(i)).^0.5)';
+        b = 0.5*((1+correlation_coeff(i)).^0.5 -...
+            (1-correlation_coeff(i)).^0.5)';
+    
+        A = sigma_1 * (a * x(i, :) + b * y(i, :));
+        B = sigma_2 * (b * x(i, :) + a * y(i, :));
+    
+        parfor j = 1:size(lambda, 2)
+            R(j, i) = (sum(-2 * ((A > lambda(j)) ~= (B > lambda(j))) + 1, 2) / time)';
+        end
+    end
+end
+
+%% Function 2: GL approximation method
+
+function R_y = GL_approximation(sigma_1, sigma_2, d, N_q, correlation_coeff)
+    p_0i = sigma_1^2 * ones(1, size(correlation_coeff, 2));
+    p_0j = sigma_2^2 * ones(1, size(correlation_coeff, 2));
+    p_ij = sigma_1 * sigma_2 * correlation_coeff;
+    
+    y = sym('y');
+    theta = double(vpasolve(legendreP(N_q,y) == 0));
+    P_prime = diff(legendreP(N_q, y), y);
+    theta_diff = double(subs(P_prime, y, theta));
+    
+    a = coefficient(p_0i, p_0j, p_ij, d);
+    b = integration(p_0i, p_0j, p_ij);
+    omega = repmat(omega_i(theta, theta_diff), 1, size(correlation_coeff, 2));
+    c = sum(omega .* (D_1(pi*(theta + 1)/4, p_0i, p_0j, p_ij, d) -...
+        D_2(pi*(theta + 1)/4, p_0i, p_0j, p_ij, d)), 1);
+    
+    R_y = a.*(b-pi/4*c)-1;
+
+
+    function value = qfuncapprox(x)
+        value = zeros(size(x, 1), size(x, 2));
+        for i=1:size(x, 1)
+            for j=1:size(x, 2)
+                value(i, j) = qfunc(x(i, j));
+            end
+        end
+    end
+
+    function value = omega_i(x, p_derivative)
+        value = 2 ./ (1 - x .^ 2) ./ p_derivative.^2;
+    end
+
+    function value = coefficient(p_0i, p_0j, p_ij, d)
+        value = exp(-d^2 .* (p_0i + p_0j - 2 * p_ij) ./ 2 ./ ...
+            (p_0i .* p_0j - p_ij .^ 2)) ./ pi ./...
+            (p_0i .* p_0j - p_ij .^ 2).^0.5;
+    end
+
+    function value = integration(p_0i, p_0j, p_ij)
+        value = (p_0i .* p_0j - p_ij .^ 2).^0.5 .*...
+            (pi + 2 .* asin(p_ij ./ (p_0i .* p_0j).^0.5));
+    end
+
+    function value = D_1(theta, p_0i, p_0j, p_ij, d)
+        p_0i = repmat(p_0i, size(theta, 1), 1);
+        p_0j = repmat(p_0j, size(theta, 1), 1);
+        p_ij = repmat(p_ij, size(theta, 1), 1);
+        theta = repmat(theta, 1, size(p_0i, 2));
+        alpha_s = d * (p_0j .* cos(theta) + p_0i .* sin(theta) -...
+            p_ij .* (cos(theta) + sin(theta))) ./ (p_0i .* p_0j - p_ij .^ 2);
+        beta_s = (p_0j .* (cos(theta).^2) + p_0i .* (sin(theta) .^2) -...
+            p_ij .* sin(2*theta)) ./ ...
+            (2*(p_0i .* p_0j - p_ij .^ 2));
+        value = (pi ./ beta_s) .^ 0.5 .* alpha_s ./ beta_s .* ...
+            qfuncapprox(alpha_s ./ (2*beta_s).^0.5) .* ...
+            exp(alpha_s .^ 2 ./ 4 ./ beta_s);
+    end
+
+    function value = D_2(theta, p_0i, p_0j, p_ij, d)
+        p_0i = repmat(p_0i, size(theta, 1), 1);
+        p_0j = repmat(p_0j, size(theta, 1), 1);
+        p_ij = repmat(p_ij, size(theta, 1), 1);
+        theta = repmat(theta, 1, size(p_0i, 2));
+        alpha_s = d * (p_0j .* cos(theta) + p_0i .* sin(theta) -...
+            p_ij .* (cos(theta) + sin(theta))) ./ (p_0i .* p_0j - p_ij .^ 2);
+        beta_s = (p_0j .* (cos(theta).^2) + p_0i .* (sin(theta) .^2) -...
+            p_ij .* sin(2*theta)) ./ ...
+            (2*(p_0i .* p_0j - p_ij .^ 2));
+        value = (pi ./ beta_s) .^ 0.5 .* alpha_s ./ 2 ./ beta_s .* ...
+            exp(alpha_s .^ 2 ./ 4 ./ beta_s);
+    end
+end
+
+%% Function 3: OBHL approximation method
+
+function value = one_bit_hermite_law(A_dis, beta_dis, L, sigma_1, sigma_2, lambda, correlation_coeff)
+    gamma_1 = lambda/sigma_1;
+    gamma_2 = lambda/sigma_2;
+    gamma = ((gamma_1^2 + gamma_2^2)/2)^0.5;
+    mu_1 = 2*qfunc(gamma_1)-1;
+    mu_2 = 2*qfunc(gamma_2)-1;
+    
+    error = e_of_n(L, A_dis, beta_dis) .* d_of_n(L, gamma_1, gamma_2) *...
+        (correlation_coeff' .^ (0:1:L-1))';
+    
+    value = mu_1 * mu_2 + A_dis * correlation_coeff .* ...
+        psi_1(beta_dis * correlation_coeff, gamma, gamma_1, gamma_2) +...
+        2 .* correlation_coeff .* exp(-(gamma)^2)/pi .* error;
+
+    function value = psi_1(eta, gamma, gamma_1, gamma_2)
+        value = 2 / pi ./ (1-eta.^2).^0.5 .* exp(-(gamma^2-eta*gamma_1*gamma_2)./(1-eta.^2));
+    end
+
+    function value = e_of_n(L, A, beta)
+        n = 0:1:L-1;
+        value = 1 ./ (n+1) - A * beta .^ n;
+    end
+
+    function value = d_of_n(L, gamma_1, gamma_2)
+        value = Hermite_result(L-1, gamma_1) .* Hermite_result(L-1, gamma_2);
+    end
+
+    function value = Hermite_result(num, gamma)
+        if num == 0
+            value = 1;
+        elseif num == 1
+            value = [1, gamma];
+        else
+            value = Hermite_result(num-1, gamma);
+            newvalue = gamma / num^0.5 * value(end) - ...
+                ((num-1)/num)^0.5 *value(end - 1);
+            value = [value, newvalue];
+        end
+    end
+end
+
+%% Function 4: Parameter design
+
+function [A, beta] = design_parameter(L, method_name)
+    switch (method_name)
+        case 'this paper'
+            x = sym('x');
+            w0 = lambertw(0, -(-1/4/x)^0.5);
+            w1 = lambertw(-1, -(-1/4/x)^0.5);
+    
+            eqn1 = 2*w0*w1^2 + 2*w1*w0^2 + w0^2 + w1^2 == 0;
+            C = vpasolve(eqn1,x,[-3.201 -3.2]);
+            W = lambertw(-1,-(-1/4/C)^0.5);
+            K = (2*W+1)/(4*W^2);
+    
+            y = sym('y');
+            eqn2 = -C*exp(y) + 1/y == K;
+            N = exp(vpasolve(eqn2,y,[-0.447 -0.446]));
+    
+            beta = double(N)^(1/(L+1));
+            A = double(C) * beta * log(beta);
+    
+        case 'previous paper'
+            A = (L+2)^L / (L+1)^(L+1);
+            beta = (L+1) / (L+2);
+    end
+end
