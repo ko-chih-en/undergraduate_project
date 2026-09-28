@@ -8,7 +8,7 @@ Assuming that X_1 and X_2 are two N(0, 1) random variables and d is the threshol
 
 $Y_1 = \begin{matrix}
 1 & if X_1>d\\
--1 & if X_1<d\\
+-1 & if X_1<d
 \end{matrix}$
 and $-1$ if $X_1<d$
 
