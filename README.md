@@ -6,7 +6,7 @@ One bit quantization problem:
 
 Assuming that X_1 and X_2 are two N(0, 1) random variables and d is the threshold for one-bit quantization.
 
-$Y_1 = \begin{array}[ll]
+$Y_1 = \begin{array}{ll}
 1 & if X_1>d
 \end{array}$ if $X_1>d$ and $-1$ if $X_1<d$
 
