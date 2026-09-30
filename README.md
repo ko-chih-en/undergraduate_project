@@ -1,8 +1,6 @@
-# undergraduate_project
-
 In this project, we compare 4 methods to compute or estimate the one bit quantization problem.
 
-# One bit quantization problem:
+# One bit quantization problem
 
 Assuming that $$X_1$$ and $$X_2$$ are two $$\mathcal{N}(0, 1)$$ random variables and d is the threshold for one-bit quantization.
 
