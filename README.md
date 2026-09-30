@@ -25,3 +25,7 @@ $$
 Here we aim to use $$\mathbb{E}[Y_1 Y_2]$$ to derive the correlation coefficient of $X_1$ and $X_2$.
 
 
+# Gaussian-Legendre Approximation
+
+
+# One-Bit Hermite Law Approximation
